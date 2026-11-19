@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>UoB MLA traffic lights explorer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0f1419;
+      --bg-elevated: #1a2332;
+      --bg-card: #1e2a3a;
+      --bg-hover: #263447;
+      --border: #2d3a4f;
+      --text: #e8eef7;
+      --text-muted: #8b9bb4;
+      --text-dim: #5c6b82;
+      --accent: #3b82f6;
+      --accent-soft: rgba(59, 130, 246, 0.15);
+      --high: #22c55e;
+      --high-bg: rgba(34, 197, 94, 0.15);
+      --medium: #f59e0b;
+      --medium-bg: rgba(245, 158, 11, 0.15);
+      --low: #ef4444;
+      --low-bg: rgba(239, 68, 68, 0.15);
+      --tag-bg: #2a3a52;
+      --tag-text: #a8c0e0;
+      --radius: 12px;
+      --radius-sm: 8px;
+      --shadow: 0 4px 24px rgba(0,0,0,0.35);
+      --font: 'DM Sans', system-ui, sans-serif;
+      --mono: 'JetBrains Mono', ui-monospace, monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      min-height: 100vh;
+      background-image:
+        radial-gradient(ellipse 80% 50% at 50% -20%, rgba(59, 130, 246, 0.12), transparent),
+        radial-gradient(ellipse 60% 40% at 100% 0%, rgba(34, 197, 94, 0.06), transparent);
+    }
+
+    .app {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 1.5rem 1.25rem 4rem;
+    }
+
+    /* Header */
+    header {
+      margin-bottom: 2rem;
+    }
+    header h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+    header h1 span.logo {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 2.25rem;
+      height: 2.25rem;
+      background: linear-gradient(135deg, #3b82f6, #22c55e);
+      border-radius: 10px;
+      font-size: 1.1rem;
+    }
+    header p {
+      color: var(--text-muted);
+      margin-top: 0.35rem;
+      font-size: 0.95rem;
+    }
+    header .credit {
+      margin-top: 0.4rem;
+      font-size: 0.78rem;
+      color: var(--text-dim);
+      opacity: 0.35;
+      transition: opacity 0.25s ease;
+      letter-spacing: 0.01em;
+    }
+    header .credit:hover {
+      opacity: 0.9;
+    }
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      gap: 0.4rem;
+      background: var(--bg-elevated);
+      padding: 0.35rem;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      margin-bottom: 1.5rem;
+      width: fit-content;
+    }
+    .tab {
+      padding: 0.55rem 1.25rem;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-family: var(--font);
+      font-size: 0.95rem;
+      font-weight: 500;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .tab:hover { color: var(--text); background: var(--bg-hover); }
+    .tab.active {
+      background: var(--accent);
+      color: white;
+      box-shadow: 0 2px 8px rgba(59, 130, 246, 0.35);
+    }
+
+    /* Controls */
+    .controls {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 1rem;
+      margin-bottom: 1.25rem;
+      align-items: start;
+    }
+    @media (max-width: 720px) {
+      .controls { grid-template-columns: 1fr; }
+    }
+
+    .search-wrap {
+      position: relative;
+    }
+    .search-wrap input {
+      width: 100%;
+      padding: 0.75rem 1rem 0.75rem 2.75rem;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 0.95rem;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .search-wrap input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-soft);
+    }
+    .search-wrap input::placeholder { color: var(--text-dim); }
+    .search-icon {
+      position: absolute;
+      left: 0.95rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-dim);
+      pointer-events: none;
+    }
+
+    .filter-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.6rem;
+      align-items: center;
+    }
+
+    .yield-filters {
+      display: flex;
+      gap: 0.35rem;
+      background: var(--bg-elevated);
+      padding: 0.3rem;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+    }
+    .yield-btn {
+      padding: 0.4rem 0.75rem;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-family: var(--font);
+      font-size: 0.8rem;
+      font-weight: 600;
+      border-radius: 7px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      transition: all 0.15s;
+    }
+    .yield-btn:hover { background: var(--bg-hover); color: var(--text); }
+    .yield-btn.active.high { background: var(--high-bg); color: var(--high); }
+    .yield-btn.active.medium { background: var(--medium-bg); color: var(--medium); }
+    .yield-btn.active.low { background: var(--low-bg); color: var(--low); }
+    .yield-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+    }
+    .yield-dot.high { background: var(--high); }
+    .yield-dot.medium { background: var(--medium); }
+    .yield-dot.low { background: var(--low); }
+
+    .sort-select {
+      padding: 0.45rem 0.75rem;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 0.85rem;
+      cursor: pointer;
+      outline: none;
+    }
+    .sort-select:focus { border-color: var(--accent); }
+
+    /* Tag filter panel */
+    .tag-panel {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem 1.15rem;
+      margin-bottom: 1.25rem;
+    }
+    .tag-panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.75rem;
+    }
+    .tag-panel-header h3 {
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--text-muted);
+    }
+    .clear-tags {
+      font-size: 0.8rem;
+      color: var(--accent);
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-family: var(--font);
+      font-weight: 500;
+    }
+    .clear-tags:hover { text-decoration: underline; }
+    .tag-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+    }
+    .tag-chip {
+      padding: 0.3rem 0.7rem;
+      background: var(--tag-bg);
+      color: var(--tag-text);
+      border: 1px solid transparent;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+      user-select: none;
+    }
+    .tag-chip:hover { border-color: var(--accent); color: var(--text); }
+    .tag-chip.selected {
+      background: var(--accent-soft);
+      color: #93c5fd;
+      border-color: var(--accent);
+    }
+
+    /* Stats bar */
+    .stats {
+      display: flex;
+      gap: 1.25rem;
+      margin-bottom: 1.25rem;
+      flex-wrap: wrap;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+    .stats strong { color: var(--text); font-weight: 600; }
+
+    /* Results grid */
+    .results {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 0.85rem;
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.1rem 1.2rem;
+      transition: border-color 0.2s, transform 0.15s, box-shadow 0.2s;
+      display: flex;
+      flex-direction: column;
+      gap: 0.65rem;
+    }
+    .card:hover {
+      border-color: #3d4f6a;
+      transform: translateY(-2px);
+      box-shadow: var(--shadow);
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 0.75rem;
+    }
+    .card-title {
+      font-size: 1.02rem;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      line-height: 1.35;
+    }
+    .yield-badge {
+      flex-shrink: 0;
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      padding: 0.22rem 0.5rem;
+      border-radius: 6px;
+    }
+    .yield-badge.high { background: var(--high-bg); color: var(--high); }
+    .yield-badge.medium { background: var(--medium-bg); color: var(--medium); }
+    .yield-badge.low { background: var(--low-bg); color: var(--low); }
+
+    .card-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.3rem;
+    }
+    .card-tag {
+      font-size: 0.72rem;
+      padding: 0.18rem 0.5rem;
+      background: var(--tag-bg);
+      color: var(--tag-text);
+      border-radius: 5px;
+      font-weight: 500;
+    }
+
+    .empty {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: 3rem 1rem;
+      color: var(--text-muted);
+    }
+    .empty svg { margin-bottom: 0.75rem; opacity: 0.5; }
+
+    /* Legend */
+    .legend {
+      margin-top: 2.5rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--border);
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+    .legend h4 {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 0.6rem;
+      color: var(--text-dim);
+    }
+    .legend-items {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1.25rem;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    footer {
+      margin-top: 2rem;
+      font-size: 0.8rem;
+      color: var(--text-dim);
+      text-align: center;
+    }
+    footer a { color: var(--accent); text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #3d4f6a; }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>
+        <span class="logo">🩺</span>
+        UoB MLA traffic lights explorer
+      </h1>
+      <p class="credit">created by Abdullah Mirza</p>
+    </header>
+
+    <div class="tabs" role="tablist">
+      <button class="tab" data-tab="presentations" role="tab">Presentations</button>
+      <button class="tab active" data-tab="conditions" role="tab">Conditions</button>
+    </div>
+
+    <div class="controls">
+      <div class="search-wrap">
+        <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        <input type="search" id="search" placeholder="Search by name…" autocomplete="off" />
+      </div>
+      <div class="filter-row">
+        <div class="yield-filters" id="yieldFilters">
+          <button class="yield-btn active high" data-yield="high"><span class="yield-dot high"></span> High</button>
+          <button class="yield-btn active medium" data-yield="medium"><span class="yield-dot medium"></span> Medium</button>
+          <button class="yield-btn active low" data-yield="low"><span class="yield-dot low"></span> Low</button>
+        </div>
+        <select class="sort-select" id="sort">
+          <option value="name-asc">Name A–Z</option>
+          <option value="name-desc">Name Z–A</option>
+          <option value="yield-high">Yield: High first</option>
+          <option value="yield-low">Yield: Low first</option>
+          <option value="tags-desc">Most tags first</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="tag-panel">
+      <div class="tag-panel-header">
+        <h3>Filter by area of clinical practice</h3>
+        <button class="clear-tags" id="clearTags">Clear all</button>
+      </div>
+      <div class="tag-list" id="tagList"></div>
+    </div>
+
+    <div class="stats" id="stats"></div>
+
+    <div class="results" id="results"></div>
+
+    <footer>
+      Data taken from that xlsx sheet that an older year sent in the yr 3 chat
+    </footer>
+  </div>
+
+  <script>
+    // Embedded data
+    const DATA = {"presentations":[{"name":"Abdominal distension","tags":["Cancer","Gastrointestinal including liver","General practice and primary healthcare","Obstetrics and gynaecology","Surgery"],"yield":"high"},{"name":"Abdominal mass","tags":["Cancer","Child health","Gastrointestinal including liver","Obstetrics and gynaecology","Surgery"],"yield":"high"},{"name":"Abnormal cervical smear result","tags":["Obstetrics and gynaecology"],"yield":"low"},{"name":"Abnormal development/ developmental delay","tags":["Child health","Neurosciences"],"yield":"low"},{"name":"Abnormal eating or exercising behaviour","tags":["General practice and primary healthcare","Mental health"],"yield":"medium"},{"name":"Abnormal involuntary movements","tags":["Child health","Medicine of older adult","Neurosciences"],"yield":"high"},{"name":"Abnormal urinalysis","tags":["Acute and emergency","General practice and primary healthcare","Obstetrics and gynaecology","Renal and urology"],"yield":"medium"},{"name":"Acute abdominal pain","tags":["Cardiovascular","Child health","Gastrointestinal including liver","General practice and primary healthcare","Obstetrics and gynaecology","Surgery"],"yield":"high"},{"name":"Acute and chronic pain management","tags":["Acute and emergency","Cancer","General practice and primary healthcare","Obstetrics and gynaecology","Neurosciences","Palliative and end of life care","Perioperative medicine and anaesthesia"],"yield":"medium"},{"name":"Acute change in or loss of vision","tags":["Acute and emergency","Cardiovascular","Neurosciences","Ophthalmology"],"yield":"medium"},{"name":"Acute joint pain/swelling","tags":["Child health","General practice and primary healthcare","Musculoskeletal"],"yield":"medium"},{"name":"Acute kidney injury","tags":["Acute and emergency","Child health","Perioperative medicine and anaesthesia","Renal and urology"],"yield":"low"},{"name":"Acute rash","tags":["Child health","Dermatology","General practice and primary healthcare","Infection"],"yield":"medium"},{"name":"Addiction","tags":["Mental health"],"yield":"low"},{"name":"Allergies","tags":["Child health","Ear, nose and throat","General practice and primary healthcare","Ophthalmology","Respiratory"],"yield":"medium"},{"name":"Altered sensation, numbness and tingling","tags":["Neurosciences","Endocrine and metabolic"],"yield":"medium"},{"name":"Amenorrhoea","tags":["Endocrine and metabolic","Obstetrics and gynaecology"],"yield":"low"},{"name":"Anaphylaxis","tags":["Acute and emergency"],"yield":"medium"},{"name":"Anosmia","tags":["Ear, nose and throat","Infection","Neurosciences"],"yield":"low"},{"name":"Anxiety, phobias, OCD","tags":["General practice and primary healthcare","Mental health","Cardiovascular","Respiratory"],"yield":"medium"},{"name":"Ascites","tags":["Cancer","Gastrointestinal including liver","Surgery"],"yield":"high"},{"name":"Auditory hallucinations","tags":["Medicine of older adult","Mental health"],"yield":"medium"},{"name":"Back pain","tags":["General practice and primary healthcare","Musculoskeletal","Neurosciences","Cardiovascular"],"yield":"medium"},{"name":"Behaviour/personality change","tags":["General practice and primary healthcare","Mental health","Neurosciences"],"yield":"low"},{"name":"Behavioural difficulties in childhood","tags":["Child health","Mental health"],"yield":"low"},{"name":"Bites and stings","tags":["Acute and emergency","Dermatology","General practice and primary healthcare"],"yield":"low"},{"name":"Blackouts and faints","tags":["Cardiovascular","Medicine of older adult","Neurosciences"],"yield":"high"},{"name":"Bleeding antepartum","tags":["Acute and emergency","Obstetrics and gynaecology","Perioperative medicine and anaesthesia"],"yield":"low"},{"name":"Bleeding from lower GI tract","tags":["Acute and emergency","Cancer","Clinical haematology","Gastrointestinal including liver","General practice and primary healthcare","Surgery"],"yield":"high"},{"name":"Bleeding from upper GI tract","tags":["Acute and emergency","Cancer","Gastrointestinal including liver","Surgery"],"yield":"high"},{"name":"Bleeding postpartum","tags":["Obstetrics and gynaecology","Perioperative medicine and anaesthesia"],"yield":"low"},{"name":"Bone pain","tags":["Cancer","Clinical haematology","Endocrine and metabolic","Musculoskeletal","Perioperative medicine and anaesthesia"],"yield":"high"},{"name":"Breast lump","tags":["Cancer","General practice and primary healthcare","Surgery"],"yield":"low"},{"name":"Breast tenderness/pain","tags":["General practice and primary healthcare","Obstetrics and gynaecology","Surgery"],"yield":"low"},{"name":"Breathlessness","tags":["Acute and emergency","Cancer","Cardiovascular","Child health","General practice and primary healthcare","Neurosciences","Obstetrics and gynaecology","Perioperative medicine and anaesthesia","Respiratory"],"yield":"high"},{"name":"Bruising","tags":["Child health","Clinical haematology","Musculoskeletal"],"yield":"high"},{"name":"Burns","tags":["Acute and emergency","Dermatology"],"yield":"low"},{"name":"Cardiorespiratory arrest","tags":["Acute and emergency","Cardiovascular","Perioperative medicine and anaesthesia","Respiratory"],"yield":"high"},{"name":"Change in bowel habit","tags":["Cancer","Gastrointestinal including liver","General practice and primary healthcare","Surgery"],"yield":"high"},{"name":"Change in stool colour","tags":["Gastrointestinal including liver","Surgery"],"yield":"high"},{"name":"Chest pain","tags":["Acute and emergency","Cardiovascular","General practice and primary healthcare","Infection","Medicine of older adult","Obstetrics and gynaecology","Respiratory"],"yield":"high"},{"name":"Child abuse","tags":["Child health","Mental health"],"yield":"low"},{"name":"Chronic abdominal pain","tags":["Child health","Gastrointestinal including liver","General practice and primary healthcare","Mental health"],"yield":"high"},{"name":"Chronic joint pain/stiffness","tags":["General practice and primary healthcare","Musculoskeletal"],"yield":"low"},{"name":"Chronic kidney disease","tags":["Child health","General practice and primary healthcare","Perioperative medicine and anaesthesia","Renal and urology"],"yield":"medium"},{"name":"Chronic rash","tags":["Child health","Dermatology","General practice and primary healthcare"],"yield":"low"},{"name":"Cold, painful, pale, pulseless leg/foot","tags":["Cardiovascular"],"yield":"high"},{"name":"Complications of labour","tags":["Obstetrics and gynaecology"],"yield":"low"},{"name":"Confusion","tags":["Endocrine and metabolic","Medicine of older adult","Mental health","Neurosciences","Perioperative medicine and anaesthesia"],"yield":"high"},{"name":"Congenital abnormalities","tags":["Child health","Musculoskeletal"],"yield":"medium"},{"name":"Constipation","tags":["Child health","Gastrointestinal including liver","General practice and primary healthcare","Medicine of older adult"],"yield":"high"},{"name":"Contraception request/advice","tags":["General practice and primary healthcare","Obstetrics and gynaecology"],"yield":"low"},{"name":"Cough","tags":["Cancer","Cardiovascular","Child health","Ear, nose and throat","General practice and primary healthcare","Respiratory"],"yield":"high"},{"name":"Crying baby","tags":["Child health","General practice and primary healthcare"],"yield":"high"},{"name":"Cyanosis","tags":["Acute and emergency","Cardiovascular","Child health","Respiratory"],"yield":"high"},{"name":"Death and dying","tags":["All areas of clinical practice"],"yield":"high"},{"name":"Decreased appetite","tags":["Cancer","Gastrointestinal including liver","Mental health"],"yield":"high"},{"name":"Decreased/loss of consciousness","tags":["Acute and emergency","Child health","Endocrine and metabolic","Neurosciences","Perioperative medicine and anaesthesia"],"yield":"high"},{"name":"Dehydration","tags":["Acute and emergency","Child health","Perioperative medicine and anaesthesia","Renal and urology"],"yield":"high"},{"name":"Deteriorating patient","tags":["Acute and emergency","Child health","General practice and primary healthcare"],"yield":"low"},{"name":"Diarrhoea","tags":["Child health","Gastrointestinal including liver","General practice and primary healthcare","Infection"],"yield":"high"},{"name":"Difficulty with breast feeding","tags":["Child health","Obstetrics and gynaecology"],"yield":"high"},{"name":"Diplopia","tags":["Neurosciences","Ophthalmology"],"yield":"medium"},{"name":"Dizziness","tags":["Cardiovascular","Ear, nose and throat","General practice and primary healthcare","Medicine of older adult","Neurosciences"],"yield":"high"},{"name":"Driving advice","tags":["Cardiovascular","General practice and primary healthcare","Medicine of older adult","Mental health","Neurosciences"],"yield":"high"},{"name":"Dysmorphic child","tags":["Child health"],"yield":"low"},{"name":"Ear and nasal discharge","tags":["Ear, nose and throat","General practice and primary healthcare"],"yield":"low"},{"name":"Elation/elated mood","tags":["Mental health"],"yield":"low"},{"name":"Elder abuse","tags":["Medicine of older adult","Mental health"],"yield":"high"},{"name":"Electrolyte abnormalities","tags":["Acute and emergency","Cancer","Endocrine and metabolic","Medicine of older adult","Perioperative medicine and anaesthesia","Renal and urology"],"yield":"high"},{"name":"End of life care/ symptoms of terminal illness","tags":["Mental health","Palliative and end of life care","Perioperative medicine and anaesthesia"],"yield":"medium"},{"name":"Epistaxis","tags":["Acute and emergency","Clinical haematology","Ear, nose and throat"],"yield":"medium"},{"name":"Erectile dysfunction","tags":["Cardiovascular","Endocrine and metabolic","General practice and primary healthcare","Renal and urology","Sexual health"],"yield":"low"},{"name":"Eye pain/discomfort","tags":["General practice and primary healthcare","Musculoskeletal","Neurosciences","Ophthalmology"],"yield":"low"},{"name":"Eye trauma","tags":["Acute and emergency","Ophthalmology"],"yield":"low"},{"name":"Facial pain","tags":["Ear, nose and throat","Neurosciences","Perioperative medicine and anaesthesia"],"yield":"low"},{"name":"Facial weakness","tags":["Neurosciences"],"yield":"high"},{"name":"Facial/periorbital swelling","tags":["Acute and emergency","Ear, nose and throat","General practice and primary healthcare","Infection","Ophthalmology"],"yield":"low"},{"name":"Faecal incontinence","tags":["Gastrointestinal including liver","Medicine of older adult"],"yield":"high"},{"name":"Falls","tags":["General practice and primary healthcare","Medicine of older adult"],"yield":"high"},{"name":"Family history of possible genetic disorder","tags":["All areas of clinical practice"],"yield":"high"},{"name":"Fasciculation","tags":["Neurosciences"],"yield":"medium"},{"name":"Fatigue","tags":["Cancer","Clinical haematology","Endocrine and metabolic","General practice and primary healthcare","Mental health"],"yield":"high"},{"name":"Fever","tags":["Cardiovascular","Child health","Clinical haematology","General practice and primary healthcare","Infection","Musculoskeletal","Respiratory"],"yield":"high"},{"name":"Fit notes","tags":["General practice and primary healthcare"],"yield":"medium"},{"name":"Fits/seizures","tags":["Child health","Neurosciences","Obstetrics and gynaecology"],"yield":"high"},{"name":"Fixed abnormal beliefs","tags":["Mental health"],"yield":"low"},{"name":"Flashes and floaters in visual fields","tags":["Ophthalmology"],"yield":"low"},{"name":"Food intolerance","tags":["Child health","Gastrointestinal including liver"],"yield":"high"},{"name":"Foreign body in eye","tags":["Acute and emergency","Ophthalmology"],"yield":"low"},{"name":"Frailty","tags":["General practice and primary healthcare","Medicine of older adult","Perioperative medicine and anaesthesia"],"yield":"high"},{"name":"Gradual change in or loss of vision","tags":["Endocrine and metabolic","Ophthalmology"],"yield":"medium"},{"name":"Gynaecomastia","tags":["Endocrine and metabolic"],"yield":"high"},{"name":"Haematuria","tags":["Cancer","Child health","General practice and primary healthcare","Infection","Renal and urology","Surgery"],"yield":"high"},{"name":"Haemoptysis","tags":["Cancer","General practice and primary healthcare","Infection","Respiratory"],"yield":"high"},{"name":"Head injury","tags":["Acute and emergency","Neurosciences","Perioperative medicine and anaesthesia"],"yield":"low"},{"name":"Headache","tags":["Acute and emergency","Cancer","Child health","General practice and primary healthcare","Neurosciences","Obstetrics and gynaecology"],"yield":"medium"},{"name":"Hearing loss","tags":["Ear, nose and throat","Medicine of older adult"],"yield":"medium"},{"name":"Heart murmurs","tags":["Cardiovascular"],"yield":"high"},{"name":"Hoarseness and voice change","tags":["Ear, nose and throat","Endocrine and metabolic","Respiratory"],"yield":"medium"},{"name":"Hyperemesis","tags":["Obstetrics and gynaecology"],"yield":"low"},{"name":"Hypertension","tags":["Cardiovascular","Endocrine and metabolic","General practice and primary healthcare","Medicine of older adult","Obstetrics and gynaecology","Renal and urology"],"yield":"high"},{"name":"Immobility","tags":["Medicine of older adult"],"yield":"high"},{"name":"Incidental findings","tags":["All areas of clinical practice"],"yield":"high"},{"name":"Infant feeding problems","tags":["Child health","General practice and primary healthcare"],"yield":"high"},{"name":"Intrauterine death","tags":["Obstetrics and gynaecology"],"yield":"low"},{"name":"Jaundice","tags":["Cancer","Child health","Clinical haematology","Gastrointestinal including liver","Obstetrics and gynaecology"],"yield":"high"},{"name":"Labour","tags":["Obstetrics and gynaecology","Perioperative medicine and anaesthesia"],"yield":"low"},{"name":"Lacerations","tags":["Acute and emergency","Surgery"],"yield":"low"},{"name":"Learning disability","tags":["Child health","Mental health","Perioperative medicine and anaesthesia"],"yield":"low"},{"name":"Limb claudication","tags":["Cardiovascular"],"yield":"high"},{"name":"Limb weakness","tags":["Cancer","Cardiovascular","Neurosciences"],"yield":"high"},{"name":"Limp","tags":["Child health","Musculoskeletal","Neurosciences"],"yield":"medium"},{"name":"Loin pain","tags":["Surgery"],"yield":"medium"},{"name":"Loss of libido","tags":["General practice and primary healthcare","Mental health","Obstetrics and gynaecology","Sexual health"],"yield":"low"},{"name":"Loss of red reflex","tags":["Ophthalmology"],"yield":"low"},{"name":"Low blood pressure","tags":["Cardiovascular"],"yield":"high"},{"name":"Low mood/affective problems","tags":["General practice and primary healthcare","Mental health"],"yield":"low"},{"name":"Lump in groin","tags":["Cancer","Clinical haematology","Gastrointestinal including liver","Surgery"],"yield":"high"},{"name":"Lymphadenopathy","tags":["Cancer","Child health","Clinical haematology","General practice and primary healthcare"],"yield":"high"},{"name":"Massive haemorrhage","tags":["Acute and emergency","Clinical haematology","Perioperative medicine and anaesthesia"],"yield":"high"},{"name":"Melaena","tags":["Acute and emergency","Gastrointestinal including liver"],"yield":"high"},{"name":"Memory loss","tags":["Medicine of older adult","Mental health","Neurosciences"],"yield":"high"},{"name":"Menopausal problems","tags":["General practice and primary healthcare","Obstetrics and gynaecology"],"yield":"low"},{"name":"Menstrual problems","tags":["Endocrine and metabolic","General practice and primary healthcare","Obstetrics and gynaecology"],"yield":"medium"},{"name":"Mental capacity concerns","tags":["Medicine of older adult","Mental health"],"yield":"high"},{"name":"Mental health problems in pregnancy or post partum","tags":["Mental health","Obstetrics and gynaecology"],"yield":"low"},{"name":"Misplaced nasogastric tube","tags":["Clinical imaging","Perioperative medicine and anaesthesia"],"yield":"high"},{"name":"Muscle pain/ myalgia","tags":["General practice and primary healthcare","Musculoskeletal","Neurosciences"],"yield":"medium"},{"name":"Musculoskeletal deformities","tags":["Child health","Musculoskeletal"],"yield":"low"},{"name":"Nail abnormalities","tags":["Dermatology"],"yield":"low"},{"name":"Nasal obstruction","tags":["Ear, nose and throat"],"yield":"low"},{"name":"Nausea","tags":["Endocrine and metabolic","Gastrointestinal including liver","Palliative and end of life care","Perioperative medicine and anaesthesia"],"yield":"high"},{"name":"Neck lump","tags":["Cancer","Clinical haematology","Ear, nose and throat","Endocrine and metabolic"],"yield":"medium"},{"name":"Neck pain/stiffness","tags":["Infection","Musculoskeletal","Neurosciences"],"yield":"medium"},{"name":"Neonatal death or cot death","tags":["Child health"],"yield":"high"},{"name":"Neuromuscular weakness","tags":["Neurosciences","Palliative and end of life care","Perioperative medicine and anaesthesia"],"yield":"medium"},{"name":"Night sweats","tags":["Infection"],"yield":"high"},{"name":"Nipple discharge","tags":["Endocrine and metabolic","Obstetrics and gynaecology","Surgery"],"yield":"low"},{"name":"Normal pregnancy and antenatal care","tags":["Obstetrics and gynaecology"],"yield":"low"},{"name":"Oliguria","tags":["Renal and urology"],"yield":"medium"},{"name":"Organomegaly","tags":["Clinical haematology","Gastrointestinal including liver"],"yield":"high"},{"name":"Overdose","tags":["Acute and emergency","Child health","Mental health","Perioperative medicine and anaesthesia"],"yield":"medium"},{"name":"Pain on inspiration","tags":["Cancer","Cardiovascular","Respiratory"],"yield":"high"},{"name":"Painful ear","tags":["Ear, nose and throat","General practice and primary healthcare"],"yield":"low"},{"name":"Painful sexual intercourse","tags":["General practice and primary healthcare","Obstetrics and gynaecology","Sexual health","Surgery"],"yield":"low"},{"name":"Painful swollen leg","tags":["Cancer","Cardiovascular","General practice and primary healthcare","Infection","Obstetrics and gynaecology"],"yield":"high"},{"name":"Pallor","tags":["Child health","Clinical haematology"],"yield":"high"},{"name":"Palpitations","tags":["Cardiovascular","Endocrine and metabolic","Mental health"],"yield":"high"},{"name":"Pelvic mass","tags":["Cancer","Obstetrics and gynaecology"],"yield":"low"},{"name":"Pelvic pain","tags":["General practice and primary healthcare","Obstetrics and gynaecology"],"yield":"low"},{"name":"Perianal symptoms","tags":["Gastrointestinal including liver","General practice and primary healthcare"],"yield":"high"},{"name":"Peripheral oedema and ankle swelling","tags":["Cardiovascular","Child health","General practice and primary healthcare","Medicine of older adult","Renal and urology"],"yield":"high"},{"name":"Petechial rash","tags":["Clinical haematology","Infection"],"yield":"high"},{"name":"Pleural effusion","tags":["Cancer","Infection","Respiratory"],"yield":"high"},{"name":"Poisoning","tags":["Acute and emergency","Child health"],"yield":"medium"},{"name":"Polydipsia (thirst)","tags":["Child health","Endocrine and metabolic"],"yield":"high"},{"name":"Post-surgical care and complications","tags":["Acute and emergency","Perioperative medicine and anaesthesia","Surgery"],"yield":"high"},{"name":"Pregnancy risk assessment","tags":["Cardiovascular","Obstetrics and gynaecology"],"yield":"low"},{"name":"Prematurity","tags":["Child health"],"yield":"medium"},{"name":"Pressure of speech","tags":["Mental health"],"yield":"low"},{"name":"Pruritus","tags":["Dermatology","Gastrointestinal including liver","Obstetrics and gynaecology"],"yield":"high"},{"name":"Ptosis","tags":["Neurosciences"],"yield":"medium"},{"name":"Pubertal development","tags":["Child health","Endocrine and metabolic"],"yield":"low"},{"name":"Purpura","tags":["Clinical haematology"],"yield":"high"},{"name":"Rectal prolapse","tags":["Gastrointestinal including liver","Surgery"],"yield":"high"},{"name":"Red eye","tags":["Musculoskeletal","Ophthalmology"],"yield":"low"},{"name":"Reduced/change in fetal movements","tags":["Obstetrics and gynaecology"],"yield":"low"},{"name":"Scarring","tags":["Dermatology"],"yield":"low"},{"name":"Scrotal/testicular pain and/or lump/swelling","tags":["Acute and emergency","Cancer","Child health","Renal and urology","Surgery"],"yield":"medium"},{"name":"Self-harm","tags":["Acute and emergency","Child health","Mental health"],"yield":"low"},{"name":"Shock","tags":["Acute and emergency","Child health","Obstetrics and gynaecology","Perioperative medicine and anaesthesia"],"yield":"medium"},{"name":"Skin lesion","tags":["Dermatology"],"yield":"low"},{"name":"Skin or subcutaneous lump","tags":["Dermatology"],"yield":"low"},{"name":"Skin ulcers","tags":["Cardiovascular","Dermatology","Medicine of older adult"],"yield":"high"},{"name":"Sleep problems","tags":["General practice and primary healthcare","Mental health","Neurosciences"],"yield":"medium"},{"name":"Small for gestational age/ large for gestational age","tags":["Obstetrics and gynaecology"],"yield":"low"},{"name":"Snoring","tags":["Ear, nose and throat","Respiratory"],"yield":"high"},{"name":"Soft tissue injury","tags":["Acute and emergency","General practice and primary healthcare","Musculoskeletal"],"yield":"low"},{"name":"Somatisation/ medically unexplained physical symptoms","tags":["General practice and primary healthcare","Mental health"],"yield":"low"},{"name":"Sore throat","tags":["Ear, nose and throat","General practice and primary healthcare","Infection"],"yield":"low"},{"name":"Speech and language problems","tags":["Child health","Neurosciences"],"yield":"high"},{"name":"Squint","tags":["Child health","Ophthalmology"],"yield":"low"},{"name":"Stridor","tags":["Acute and emergency","Child health","Ear, nose and throat","Infection","Respiratory"],"yield":"low"},{"name":"Struggling to cope at home","tags":["General practice and primary healthcare","Medicine of older adult","Mental health"],"yield":"high"},{"name":"Subfertility","tags":["General practice and primary healthcare","Obstetrics and gynaecology","Surgery"],"yield":"low"},{"name":"Substance misuse","tags":["Acute and emergency","Child health","General practice and primary healthcare","Mental health","Obstetrics and gynaecology","Perioperative medicine and anaesthesia"],"yield":"low"},{"name":"Suicidal thoughts","tags":["Child health","Mental health"],"yield":"low"},{"name":"Swallowing problems","tags":["Cancer","Ear, nose and throat","Gastrointestinal including liver","General practice and primary healthcare","Neurosciences"],"yield":"high"},{"name":"The sick child","tags":["Child health","General practice and primary healthcare"],"yield":"low"},{"name":"Threats to harm others","tags":["Mental health"],"yield":"low"},{"name":"Tinnitus","tags":["Ear, nose and throat","General practice and primary healthcare"],"yield":"low"},{"name":"Trauma","tags":["Acute and emergency","Child health","Clinical imaging","General practice and primary healthcare","Medicine of older adult","Musculoskeletal","Neurosciences","Perioperative medicine and anaesthesia","Surgery"],"yield":"low"},{"name":"Travel health advice","tags":["General practice and primary healthcare","Infection"],"yield":"low"},{"name":"Tremor","tags":["General practice and primary healthcare","Neurosciences"],"yield":"high"},{"name":"Unsteadiness","tags":["Neurosciences"],"yield":"high"},{"name":"Unwanted pregnancy and termination","tags":["General practice and primary healthcare","Obstetrics and gynaecology"],"yield":"low"},{"name":"Urethral discharge and genital ulcers/warts","tags":["Infection","Obstetrics and gynaecology","Sexual health"],"yield":"low"},{"name":"Urinary incontinence","tags":["Child health","Medicine of older adult","Obstetrics and gynaecology","Surgery"],"yield":"high"},{"name":"Urinary symptoms","tags":["Child health","Endocrine and metabolic","General practice and primary healthcare","Infection","Medicine of older adult","Neurosciences","Obstetrics and gynaecology","Renal and urology","Surgery"],"yield":"high"},{"name":"Vaccination","tags":["Child health","General practice and primary healthcare","Infection"],"yield":"high"},{"name":"Vaginal discharge","tags":["General practice and primary healthcare","Infection","Obstetrics and gynaecology","Sexual health"],"yield":"low"},{"name":"Vaginal prolapse","tags":["Obstetrics and gynaecology","Surgery"],"yield":"low"},{"name":"Vertigo","tags":["Ear, nose and throat","General practice and primary healthcare","Medicine of older adult","Neurosciences"],"yield":"high"},{"name":"Visual hallucinations","tags":["Medicine of older adult","Mental health"],"yield":"high"},{"name":"Vomiting","tags":["Acute and emergency","Child health","Gastrointestinal including liver","Infection"],"yield":"high"},{"name":"Vulval itching/lesion","tags":["Infection","Obstetrics and gynaecology","Sexual health"],"yield":"low"},{"name":"Vulval/vaginal lump","tags":["Infection","Obstetrics and gynaecology","Sexual health"],"yield":"low"},{"name":"Weight gain","tags":["Endocrine and metabolic","Gastrointestinal including liver","General practice and primary healthcare","Mental health"],"yield":"high"},{"name":"Weight loss","tags":["Cancer","Endocrine and metabolic","Infection","Mental health"],"yield":"high"},{"name":"Wellbeing checks","tags":["General practice and primary healthcare"],"yield":"high"},{"name":"Wheeze","tags":["Acute and emergency","Cardiovascular","Child health","General practice and primary healthcare","Respiratory"],"yield":"high"}],"conditions":[{"name":"Acid-base abnormality","tags":["Acute and emergency","Respiratory"],"yield":"high"},{"name":"Acne vulgaris","tags":["Dermatology","General practice and primary healthcare"],"yield":"low"},{"name":"Acoustic neuroma","tags":["Ear, nose and throat","Neurosciences"],"yield":"low"},{"name":"Acute bronchitis","tags":["Acute and emergency","General practice and primary healthcare","Respiratory"],"yield":"high"},{"name":"Acute cholangitis","tags":["Gastrointestinal including liver","Infection","Surgery"],"yield":"high"},{"name":"Acute coronary syndromes","tags":["Acute and emergency","Cardiovascular"],"yield":"high"},{"name":"Acute glaucoma","tags":["Ophthalmology"],"yield":"low"},{"name":"Acute kidney injury","tags":["Acute and emergency","Child health","Perioperative medicine and anaesthesia","Renal and urology","Cardiovascular","Endocrine and metabolic"],"yield":"medium"},{"name":"Acute pancreatitis","tags":["Gastrointestinal including liver","Surgery"],"yield":"high"},{"name":"Acute stress reaction","tags":["General practice and primary healthcare","Mental health","Cardiovascular"],"yield":"medium"},{"name":"Addison's disease","tags":["Endocrine and metabolic"],"yield":"high"},{"name":"Adverse drug effects","tags":["All areas of clinical practice"],"yield":"high"},{"name":"Alcoholic hepatitis","tags":["Gastrointestinal including liver","Mental health"],"yield":"high"},{"name":"Allergic disorder","tags":["Acute and emergency","General practice and primary healthcare","Respiratory"],"yield":"high"},{"name":"Anaemia","tags":["Child health","Clinical haematology","Gastrointestinal including liver","General practice and primary healthcare","Obstetrics and gynaecology","Perioperative medicine and anaesthesia"],"yield":"high"},{"name":"Anal fissure","tags":["Gastrointestinal including liver","General practice and primary healthcare","Surgery"],"yield":"high"},{"name":"Anaphylaxis","tags":["Acute and emergency","Child health","General practice and primary healthcare","Perioperative medicine and anaesthesia"],"yield":"medium"},{"name":"Aneurysms, ischaemic limb and occlusions","tags":["Cardiovascular","Clinical imaging"],"yield":"high"},{"name":"Ankylosing spondylitis","tags":["Musculoskeletal"],"yield":"low"},{"name":"Anxiety disorder: generalised","tags":["General practice and primary healthcare","Mental health","Cardiovascular"],"yield":"medium"},{"name":"Anxiety disorder: post-traumatic stress disorder","tags":["Mental health","Cardiovascular"],"yield":"medium"},{"name":"Anxiety, phobias, OCD","tags":["General practice and primary healthcare","Mental health","Cardiovascular"],"yield":"medium"},{"name":"Aortic aneurysm","tags":["Acute and emergency","Cardiovascular","Surgery"],"yield":"high"},{"name":"Aortic dissection","tags":["Cardiovascular","Surgery"],"yield":"high"},{"name":"Aortic valve disease","tags":["Cardiovascular","Perioperative medicine and anaesthesia","Surgery"],"yield":"high"},{"name":"Appendicitis","tags":["Child health","Gastrointestinal including liver","Surgery"],"yield":"high"},{"name":"Arrhythmias","tags":["Acute and emergency","Cardiovascular","General practice and primary healthcare","Perioperative medicine and anaesthesia"],"yield":"high"},{"name":"Arterial thrombosis","tags":["Cardiovascular"],"yield":"high"},{"name":"Arterial ulcers","tags":["Cardiovascular","Dermatology"],"yield":"high"},{"name":"Asbestos-related lung disease","tags":["Respiratory"],"yield":"high"},{"name":"Ascites","tags":["Gastrointestinal including liver"],"yield":"high"},{"name":"Asthma","tags":["Child health","General practice and primary healthcare","Perioperative medicine and anaesthesia","Respiratory"],"yield":"high"},{"name":"Asthma COPD overlap syndrome","tags":["Respiratory"],"yield":"high"},{"name":"Atopic dermatitis and eczema","tags":["Child health","Dermatology","General practice and primary healthcare"],"yield":"low"},{"name":"Atrophic vaginitis","tags":["General practice and primary healthcare","Obstetrics and gynaecology"],"yield":"low"},{"name":"Attention deficit hyperactivity disorder","tags":["Child health","Mental health"],"yield":"low"},{"name":"Autism spectrum disorder","tags":["Child health","Mental health"],"yield":"low"},{"name":"Bacterial vaginosis","tags":["General practice and primary healthcare","Obstetrics and gynaecology"],"yield":"low"},{"name":"Basal cell carcinoma","tags":["Cancer","Dermatology"],"yield":"low"},{"name":"Bell's palsy","tags":["General practice and primary healthcare","Neurosciences","Medicine of older adult"],"yield":"medium"},{"name":"Benign eyelid disorders","tags":["General practice and primary healthcare","Ophthalmology","Medicine of older adult"],"yield":"medium"},{"name":"Benign paroxysmal positional vertigo","tags":["Ear, nose and throat","General practice and primary healthcare","Medicine of older adult"],"yield":"high"},{"name":"Benign prostatic hyperplasia","tags":["General practice and primary healthcare","Renal and urology"],"yield":"low"},{"name":"Biliary atresia","tags":["Child health","Gastrointestinal including liver"],"yield":"medium"},{"name":"Bipolar affective disorder","tags":["Mental health"],"yield":"low"},{"name":"Bladder cancer","tags":["Cancer","Clinical imaging","Renal and urology"],"yield":"low"},{"name":"Blepharitis","tags":["Ophthalmology"],"yield":"low"},{"name":"Brain abscess","tags":["Infection","Neurosciences"],"yield":"medium"},{"name":"Brain metastases","tags":["Cancer","Neurosciences","Medicine of older adult"],"yield":"medium"},{"name":"Breast abscess/ mastitis","tags":["General practice and primary healthcare","Infection","Surgery"],"yield":"low"},{"name":"Breast cancer","tags":["Cancer","Clinical imaging","Surgery"],"yield":"low"},{"name":"Breast cysts","tags":["Surgery"],"yield":"low"},{"name":"Bronchiectasis","tags":["Child health","Clinical imaging","Respiratory"],"yield":"high"},{"name":"Bronchiolitis","tags":["Child health","General practice and primary healthcare","Respiratory"],"yield":"high"},{"name":"Bursitis","tags":["General practice and primary healthcare","Musculoskeletal"],"yield":"low"},{"name":"Candidiasis","tags":["Child health","General practice and primary healthcare","Infection"],"yield":"medium"},{"name":"Cardiac arrest","tags":["Acute and emergency","Cardiovascular","Child health","Perioperative medicine and anaesthesia"],"yield":"high"},{"name":"Cardiac failure","tags":["Acute and emergency","Cardiovascular","Clinical imaging","Medicine of older adult","Palliative and end of life care","Perioperative medicine and anaesthesia"],"yield":"high"},{"name":"Cataracts","tags":["Ophthalmology"],"yield":"low"},{"name":"Cellulitis","tags":["Child health","Dermatology","Infection","Acute and emergency"],"yield":"high"},{"name":"Central retinal arterial occlusion","tags":["Ophthalmology"],"yield":"low"},{"name":"Cerebral palsy and hypoxic-ischaemic encephalopathy","tags":["Child health","Neurosciences"],"yield":"low"},{"name":"Cervical cancer","tags":["Cancer","Obstetrics and gynaecology"],"yield":"low"},{"name":"Cervical screening (HPV)","tags":["Obstetrics and gynaecology"],"yield":"low"},{"name":"Chlamydia","tags":["General practice and primary healthcare","Infection","Obstetrics and gynaecology","Sexual health"],"yield":"low"},{"name":"Cholecystitis","tags":["Gastrointestinal including liver"],"yield":"high"},{"name":"Chronic fatigue syndrome","tags":["General practice and primary healthcare","Neurosciences"],"yield":"low"},{"name":"Chronic glaucoma","tags":["Ophthalmology"],"yield":"low"},{"name":"Chronic kidney disease","tags":["Child health","General practice and primary healthcare","Perioperative medicine and anaesthesia","Renal and urology","Cardiovascular"],"yield":"medium"},{"name":"Chronic obstructive pulmonary disease","tags":["Acute and emergency","General practice and primary healthcare","Respiratory","Perioperative medicine and anaesthesia"],"yield":"high"},{"name":"Cirrhosis","tags":["Gastrointestinal including liver"],"yield":"high"},{"name":"Coeliac disease","tags":["Child health","Gastrointestinal including liver"],"yield":"high"},{"name":"Colorectal tumours","tags":["Cancer","Clinical imaging","Gastrointestinal including liver","Surgery"],"yield":"high"},{"name":"Compartment syndrome","tags":["Acute and emergency","Musculoskeletal"],"yield":"medium"},{"name":"Conjunctivitis","tags":["Child health","General practice and primary healthcare","Infection","Ophthalmology"],"yield":"low"},{"name":"Constipation","tags":["Child health","Gastrointestinal including liver","General practice and primary healthcare"],"yield":"high"},{"name":"Contact dermatitis","tags":["Dermatology","General practice and primary healthcare"],"yield":"low"},{"name":"Cord prolapse","tags":["Obstetrics and gynaecology"],"yield":"low"},{"name":"Covid-19","tags":["Infection"],"yield":"high"},{"name":"Croup","tags":["Child health","General practice and primary healthcare","Infection"],"yield":"low"},{"name":"Crystal arthropathy","tags":["General practice and primary healthcare","Musculoskeletal"],"yield":"low"},{"name":"Cushing\u2019s syndrome","tags":["Child health","Endocrine and metabolic"],"yield":"high"},{"name":"Cutaneous fungal infection","tags":["Dermatology","General practice and primary healthcare","Infection"],"yield":"low"},{"name":"Cutaneous warts","tags":["Dermatology","General practice and primary healthcare","Infection"],"yield":"low"},{"name":"Cystic fibrosis","tags":["Child health","Respiratory"],"yield":"high"},{"name":"Deep vein thrombosis","tags":["Acute and emergency","Cardiovascular","Clinical haematology","Renal and urology","Perioperative medicine and anaesthesia"],"yield":"high"},{"name":"Dehydration","tags":["Acute and emergency","Child health","Perioperative medicine and anaesthesia","Renal and urology"],"yield":"high"},{"name":"Delirium","tags":["Medicine of older adult","Mental health","Neurosciences"],"yield":"high"},{"name":"Dementias","tags":["General practice and primary healthcare","Medicine of older adult","Mental health"],"yield":"high"},{"name":"Depression","tags":["General practice and primary healthcare","Mental health","Obstetrics and gynaecology"],"yield":"medium"},{"name":"Developmental delay","tags":["Child health"],"yield":"high"},{"name":"Diabetes in pregnancy (gestational and pre-existing)","tags":["Endocrine and metabolic","Obstetrics and gynaecology"],"yield":"medium"},{"name":"Diabetes insipidus","tags":["Endocrine and metabolic","Renal and urology"],"yield":"high"},{"name":"Diabetes mellitus type 1 and 2","tags":["Child health","Endocrine and metabolic","General practice and primary healthcare","Perioperative medicine and anaesthesia"],"yield":"high"},{"name":"Diabetic eye disease","tags":["Ophthalmology"],"yield":"medium"},{"name":"Diabetic ketoacidosis","tags":["Acute and emergency","Child health","Endocrine and metabolic"],"yield":"high"},{"name":"Diabetic nephropathy","tags":["Endocrine and metabolic","Renal and urology"],"yield":"medium"},{"name":"Diabetic neuropathy","tags":["Endocrine and metabolic","Neurosciences"],"yield":"medium"},{"name":"Disease prevention/screening","tags":["General practice and primary healthcare"],"yield":"high"},{"name":"Disseminated intravascular coagulation","tags":["Child health","Clinical haematology"],"yield":"medium"},{"name":"Diverticular disease","tags":["Gastrointestinal including liver","General practice and primary healthcare"],"yield":"high"},{"name":"Down's syndrome","tags":["Child health"],"yield":"low"},{"name":"Drug overdose","tags":["Acute and emergency","Child health","Mental health","Perioperative medicine and anaesthesia"],"yield":"high"},{"name":"Eating disorders","tags":["Child health","Gastrointestinal including liver","Mental health"],"yield":"medium"},{"name":"Ectopic pregnancy","tags":["Acute and emergency","Obstetrics and gynaecology"],"yield":"low"},{"name":"Encephalitis","tags":["Infection","Neurosciences"],"yield":"medium"},{"name":"Endometrial cancer","tags":["Cancer","Obstetrics and gynaecology"],"yield":"low"},{"name":"Endometriosis","tags":["Obstetrics and gynaecology"],"yield":"low"},{"name":"Epididymitis and orchitis","tags":["Child health","Infection","Renal and urology"],"yield":"low"},{"name":"Epiglottitis","tags":["Child health","Ear, nose and throat","Perioperative medicine and anaesthesia","Obstetrics and gynaecology"],"yield":"low"},{"name":"Epilepsy","tags":["Acute and emergency","Child health","Neurosciences","Ear, nose and throat"],"yield":"medium"},{"name":"Epistaxis","tags":["Acute and emergency","Clinical haematology","Perioperative medicine and anaesthesia"],"yield":"medium"},{"name":"Essential or secondary hypertension","tags":["Cardiovascular","Endocrine and metabolic","General practice and primary healthcare","Obstetrics and gynaecology"],"yield":"high"},{"name":"Essential tremor","tags":["Neurosciences"],"yield":"high"},{"name":"Extradural haemorrhage","tags":["Acute and emergency","Clinical imaging"],"yield":"medium"},{"name":"Febrile convulsion","tags":["Child health","Neurosciences"],"yield":"low"},{"name":"Fibroadenoma","tags":["Surgery"],"yield":"low"},{"name":"Fibroids","tags":["Obstetrics and gynaecology","Surgery"],"yield":"low"},{"name":"Fibromyalgia","tags":["General practice and primary healthcare","Musculoskeletal"],"yield":"low"},{"name":"Fibrotic lung disease","tags":["Respiratory"],"yield":"high"},{"name":"Folliculitis","tags":["Dermatology","General practice and primary healthcare","Infection"],"yield":"low"},{"name":"Gallstones and biliary colic","tags":["Gastrointestinal including liver"],"yield":"high"},{"name":"Gangrene","tags":["Cardiovascular","Infection"],"yield":"high"},{"name":"Gastric cancer","tags":["Cancer","Gastrointestinal including liver"],"yield":"high"},{"name":"Gastrointestinal perforation","tags":["Acute and emergency","Gastrointestinal including liver","Surgery","Perioperative medicine and anaesthesia"],"yield":"high"},{"name":"Gastro-oesophageal reflux disease","tags":["Child health","Gastrointestinal including liver","General practice and primary healthcare","Sexual health"],"yield":"high"},{"name":"Gonorrhoea","tags":["General practice and primary healthcare","Infection","Obstetrics and gynaecology"],"yield":"low"},{"name":"Haemochromatosis","tags":["Cardiovascular","Clinical haematology","Gastrointestinal including liver"],"yield":"high"},{"name":"Haemoglobinopathies","tags":["Acute and emergency","Clinical haematology"],"yield":"high"},{"name":"Haemophilia","tags":["Clinical haematology"],"yield":"high"},{"name":"Haemorrhoids","tags":["Gastrointestinal including liver","General practice and primary healthcare"],"yield":"high"},{"name":"Head lice","tags":["Dermatology","Infection"],"yield":"low"},{"name":"Henoch-Schonlein purpura","tags":["Child health"],"yield":"low"},{"name":"Hepatitis","tags":["Child health","Gastrointestinal including liver"],"yield":"high"},{"name":"Hernias","tags":["Child health","Gastrointestinal including liver","Surgery"],"yield":"high"},{"name":"Herpes simplex virus","tags":["Child health","General practice and primary healthcare","Infection"],"yield":"medium"},{"name":"Hiatus hernia","tags":["Gastrointestinal including liver","General practice and primary healthcare"],"yield":"high"},{"name":"Hospital acquired infections","tags":["Infection"],"yield":"high"},{"name":"Human immunodeficiency virus","tags":["Infection"],"yield":"medium"},{"name":"Human papilloma virus infection","tags":["Child health","Infection"],"yield":"low"},{"name":"Hypercalcaemia of malignancy","tags":["Cancer","Endocrine and metabolic"],"yield":"high"},{"name":"Hyperlipidemia","tags":["Endocrine and metabolic"],"yield":"high"},{"name":"Hyperosmolar hyperglycaemic state","tags":["Acute and emergency","Endocrine and metabolic"],"yield":"high"},{"name":"Hyperparathyroidism","tags":["Endocrine and metabolic","Medicine of older adult"],"yield":"high"},{"name":"Hyperthermia and hypothermia","tags":["Acute and emergency","Endocrine and metabolic"],"yield":"high"},{"name":"Hypoglycaemia","tags":["Child health","Endocrine and metabolic"],"yield":"high"},{"name":"Hypoparathyroidism","tags":["Endocrine and metabolic"],"yield":"high"},{"name":"Hyposplenism/splenectomy","tags":["Child health","Gastrointestinal including liver","Clinical haematology"],"yield":"high"},{"name":"Hypothyroidism","tags":["Child health","Endocrine and metabolic","General practice and primary healthcare"],"yield":"high"},{"name":"Idiopathic arthritis","tags":["Child health","Musculoskeletal","Infection"],"yield":"low"},{"name":"Impetigo","tags":["Child health","Dermatology","General practice and primary healthcare"],"yield":"low"},{"name":"Infectious colitis","tags":["Gastrointestinal including liver","Infection"],"yield":"high"},{"name":"Infectious diarrhoea","tags":["Infection"],"yield":"high"},{"name":"Infectious mononucleosis","tags":["Ear, nose and throat","Gastrointestinal including liver","General practice and primary healthcare"],"yield":"medium"},{"name":"Infective endocarditis","tags":["Cardiovascular","Infection"],"yield":"high"},{"name":"Infective keratitis","tags":["Ophthalmology"],"yield":"low"},{"name":"Inflammatory bowel disease","tags":["Child health","Gastrointestinal including liver","Musculoskeletal","Respiratory"],"yield":"high"},{"name":"Influenza","tags":["Child health","General practice and primary healthcare","Infection"],"yield":"high"},{"name":"Intestinal ischaemia","tags":["Cardiovascular","Clinical imaging","Surgery"],"yield":"high"},{"name":"Intestinal obstruction and ileus","tags":["Child health","Clinical imaging","Perioperative medicine and anaesthesia"],"yield":"high"},{"name":"Intussusception","tags":["Child health","Clinical imaging","Surgery"],"yield":"medium"},{"name":"Iritis","tags":["Ophthalmology"],"yield":"low"},{"name":"Irritable bowel syndrome","tags":["Gastrointestinal including liver","General practice and primary healthcare"],"yield":"high"},{"name":"Ischaemic heart disease","tags":["Cardiovascular"],"yield":"high"},{"name":"Kawasaki disease","tags":["Child health"],"yield":"low"},{"name":"Leukaemia","tags":["Cancer","Child health","Clinical haematology"],"yield":"medium"},{"name":"Liver failure","tags":["Gastrointestinal including liver"],"yield":"high"},{"name":"Lower limb fractures","tags":["Clinical imaging","Medicine of older adult","Musculoskeletal"],"yield":"low"},{"name":"Lower limb soft tissue injury","tags":["Clinical imaging","General practice and primary healthcare","Musculoskeletal"],"yield":"low"},{"name":"Lower respiratory tract infection","tags":["Child health","Infection","Respiratory"],"yield":"high"},{"name":"Lung cancer","tags":["Cancer","Clinical imaging","Respiratory"],"yield":"high"},{"name":"Lyme disease","tags":["General practice and primary healthcare","Infection","Musculoskeletal"],"yield":"high"},{"name":"Lymphoma","tags":["Cancer","Child health","Clinical haematology"],"yield":"high"},{"name":"Macular degeneration","tags":["Ophthalmology"],"yield":"low"},{"name":"Malabsorption","tags":["Gastrointestinal including liver"],"yield":"high"},{"name":"Malaria","tags":["Child health","Infection","Neurosciences"],"yield":"high"},{"name":"Malignant melanoma","tags":["Cancer","Dermatology"],"yield":"low"},{"name":"Malnutrition","tags":["Child health","Gastrointestinal including liver","Medicine of older adult"],"yield":"high"},{"name":"Measles","tags":["Child health","General practice and primary healthcare","Infection"],"yield":"low"},{"name":"M\u00e9ni\u00e8re's disease","tags":["Ear, nose and throat","Neurosciences"],"yield":"medium"},{"name":"Meningitis","tags":["Acute and emergency","Child health","Infection"],"yield":"medium"},{"name":"Menopause","tags":["General practice and primary healthcare","Obstetrics and gynaecology"],"yield":"low"},{"name":"Mesenteric adenitis","tags":["Gastrointestinal including liver","Palliative and end of life care"],"yield":"high"},{"name":"Metastatic disease","tags":["Cancer","Musculoskeletal","Neurosciences","Respiratory"],"yield":"high"},{"name":"Migraine","tags":["Child health","General practice and primary healthcare","Neurosciences"],"yield":"low"},{"name":"Mitral valve disease","tags":["Cardiovascular"],"yield":"high"},{"name":"Motor neurone disease","tags":["Neurosciences"],"yield":"low"},{"name":"Multi-organ dysfunction syndrome","tags":["Palliative and end of life care"],"yield":"low"},{"name":"Multiple myeloma","tags":["Cancer","Clinical haematology","Renal and urology"],"yield":"medium"},{"name":"Multiple sclerosis","tags":["Neurosciences"],"yield":"low"},{"name":"Mumps","tags":["Child health","General practice and primary healthcare","Infection"],"yield":"low"},{"name":"Muscular dystrophies","tags":["Child health","Neurosciences"],"yield":"low"},{"name":"Myasthenia gravis","tags":["Neurosciences"],"yield":"low"},{"name":"Myeloproliferative disorders","tags":["Clinical haematology"],"yield":"medium"},{"name":"Myocardial infarction","tags":["Acute and emergency"],"yield":"high"},{"name":"Myocarditis","tags":["Cardiovascular"],"yield":"high"},{"name":"Necrotising enterocolitis","tags":["Gastrointestinal including liver"],"yield":"medium"},{"name":"Necrotising fasciitis","tags":["Acute and emergency","Infection","Perioperative medicine and anaesthesia"],"yield":"medium"},{"name":"Nephrotic syndrome","tags":["Renal and urology","Musculoskeletal"],"yield":"low"},{"name":"Non-accidental injury","tags":["Acute and emergency","Child health","Medicine of older adult"],"yield":"high"},{"name":"Notifiable diseases","tags":["Infection","Perioperative medicine and anaesthesia"],"yield":"high"},{"name":"Obesity","tags":["Child health","Endocrine and metabolic","General practice and primary healthcare"],"yield":"high"},{"name":"Obesity and pregnancy","tags":["Obstetrics and gynaecology","Respiratory"],"yield":"low"},{"name":"Obstructive sleep apnoea","tags":["Child health","Ear, nose and throat","Perioperative medicine and anaesthesia"],"yield":"high"},{"name":"Occupational lung disease","tags":["Respiratory"],"yield":"high"},{"name":"Oesophageal cancer","tags":["Cancer","Gastrointestinal including liver","Surgery"],"yield":"high"},{"name":"Optic neuritis","tags":["Ophthalmology"],"yield":"low"},{"name":"Osteoarthritis","tags":["General practice and primary healthcare","Musculoskeletal"],"yield":"medium"},{"name":"Osteomalacia","tags":["Endocrine and metabolic","Musculoskeletal"],"yield":"high"},{"name":"Osteomyelitis","tags":["Clinical imaging","Infection","Musculoskeletal"],"yield":"medium"},{"name":"Osteoporosis","tags":["General practice and primary healthcare","Endocrine and metabolic","Medicine of older adult","Infection"],"yield":"high"},{"name":"Otitis externa","tags":["Ear, nose and throat","General practice and primary healthcare"],"yield":"low"},{"name":"Otitis media","tags":["Child health","Ear, nose and throat","General practice and primary healthcare"],"yield":"low"},{"name":"Ovarian cancer","tags":["Cancer","Obstetrics and gynaecology","Surgery"],"yield":"low"},{"name":"Pancreatic cancer","tags":["Cancer","Gastrointestinal including liver","Surgery"],"yield":"high"},{"name":"Pancytopenia","tags":["Acute and emergency","Child health","Clinical haematology"],"yield":"high"},{"name":"Parkinson's disease","tags":["General practice and primary healthcare","Medicine of older adult","Neurosciences","Musculoskeletal"],"yield":"high"},{"name":"Pathological fracture","tags":["Cancer","Clinical haematology","Clinical imaging"],"yield":"medium"},{"name":"Patient on anti-coagulant therapy","tags":["Cancer","Clinical haematology"],"yield":"high"},{"name":"Patient on anti-platelet therapy","tags":["Clinical haematology","Perioperative medicine and anaesthesia"],"yield":"high"},{"name":"Pelvic inflammatory disease","tags":["General practice and primary healthcare","Obstetrics and gynaecology","Surgery"],"yield":"medium"},{"name":"Peptic ulcer disease and gastritis","tags":["Child health","Gastrointestinal including liver"],"yield":"high"},{"name":"Perianal abscesses and fistulae","tags":["Gastrointestinal including liver","Infection","Surgery"],"yield":"high"},{"name":"Pericardial disease","tags":["Cardiovascular"],"yield":"high"},{"name":"Periorbital and orbital cellulitis","tags":["Child health","Infection","Ophthalmology"],"yield":"low"},{"name":"Peripheral nerve injuries/palsies","tags":["Child health","Neurosciences"],"yield":"medium"},{"name":"Peripheral vascular disease","tags":["Cardiovascular","General practice and primary healthcare","Endocrine and metabolic","Surgery"],"yield":"high"},{"name":"Peritonitis","tags":["Child health","Gastrointestinal including liver","Infection"],"yield":"high"},{"name":"Personality disorder","tags":["Mental health"],"yield":"low"},{"name":"Pituitary tumours","tags":["Endocrine and metabolic"],"yield":"high"},{"name":"Placenta praevia","tags":["Clinical imaging","Obstetrics and gynaecology","Perioperative medicine and anaesthesia"],"yield":"low"},{"name":"Placental abruption","tags":["Obstetrics and gynaecology","Perioperative medicine and anaesthesia","Respiratory"],"yield":"low"},{"name":"Pneumonia","tags":["Acute and emergency","Clinical imaging","Infection","Respiratory"],"yield":"high"},{"name":"Pneumothorax","tags":["Acute and emergency","Child health","Clinical imaging"],"yield":"high"},{"name":"Polycythaemia","tags":["Clinical haematology"],"yield":"high"},{"name":"Polymyalgia rheumatica","tags":["General practice and primary healthcare","Musculoskeletal","Surgery"],"yield":"medium"},{"name":"Postpartum haemorrhage","tags":["Acute and emergency","Obstetrics and gynaecology","Perioperative medicine and anaesthesia"],"yield":"low"},{"name":"Pre-eclampsia, gestational hypertension","tags":["Obstetrics and gynaecology","Perioperative medicine and anaesthesia"],"yield":"low"},{"name":"Pressure sores","tags":["Dermatology","Medicine of older adult"],"yield":"high"},{"name":"Prostate cancer","tags":["Cancer","General practice and primary healthcare","Renal and urology","Musculoskeletal"],"yield":"low"},{"name":"Psoriasis","tags":["Dermatology","General practice and primary healthcare","Clinical imaging"],"yield":"low"},{"name":"Pulmonary embolism","tags":["Acute and emergency","Cardiovascular","Clinical haematology","Respiratory"],"yield":"high"},{"name":"Pulmonary hypertension","tags":["Cardiovascular","Respiratory"],"yield":"high"},{"name":"Pyloric stenosis","tags":["Child health"],"yield":"medium"},{"name":"Radiculopathies","tags":["General practice and primary healthcare","Musculoskeletal","Neurosciences"],"yield":"low"},{"name":"Raised intracranial pressure","tags":["Acute and emergency","Child health","Clinical imaging"],"yield":"medium"},{"name":"Reactive arthritis","tags":["Child health","General practice and primary healthcare","Musculoskeletal"],"yield":"medium"},{"name":"Respiratory arrest","tags":["Acute and emergency","Child health","Perioperative medicine and anaesthesia"],"yield":"high"},{"name":"Respiratory failure","tags":["Acute and emergency","Perioperative medicine and anaesthesia","Respiratory"],"yield":"high"},{"name":"Retinal detachment","tags":["Ophthalmology"],"yield":"low"},{"name":"Rheumatoid arthritis","tags":["Musculoskeletal"],"yield":"medium"},{"name":"Rhinosinusitis","tags":["Ear, nose and throat","General practice and primary healthcare"],"yield":"low"},{"name":"Right heart valve disease","tags":["Cardiovascular"],"yield":"high"},{"name":"Rubella","tags":["Child health"],"yield":"low"},{"name":"Sarcoidosis","tags":["Musculoskeletal","Respiratory"],"yield":"high"},{"name":"Scabies","tags":["Dermatology"],"yield":"low"},{"name":"Schizophrenia","tags":["Mental health"],"yield":"low"},{"name":"Scleritis","tags":["Ophthalmology"],"yield":"low"},{"name":"Self-harm","tags":["Acute and emergency","Child health","Mental health"],"yield":"low"},{"name":"Sepsis","tags":["Acute and emergency","Infection","Obstetrics and gynaecology"],"yield":"high"},{"name":"Septic arthritis","tags":["Child health","Infection","Musculoskeletal"],"yield":"medium"},{"name":"Sickle cell disease","tags":["Child health","Clinical haematology"],"yield":"high"},{"name":"Somatisation","tags":["Mental health","Musculoskeletal"],"yield":"low"},{"name":"Spinal cord compression","tags":["Acute and emergency","Cancer","Clinical imaging","Musculoskeletal","Neurosciences"],"yield":"low"},{"name":"Spinal cord injury","tags":["Acute and emergency","Clinical imaging","Neurosciences"],"yield":"low"},{"name":"Spinal fracture","tags":["Acute and emergency","Clinical imaging","Musculoskeletal"],"yield":"low"},{"name":"Squamous cell carcinoma","tags":["Cancer","Dermatology","Medicine of older adult"],"yield":"low"},{"name":"Stroke","tags":["Acute and emergency","Cardiovascular","Clinical imaging","Neurosciences"],"yield":"high"},{"name":"Subarachnoid haemorrhage","tags":["Acute and emergency","Child health","Clinical imaging","Neurosciences"],"yield":"medium"},{"name":"Subdural haemorrhage","tags":["Acute and emergency","Child health","Clinical imaging","Mental health"],"yield":"medium"},{"name":"Substance use disorder","tags":["Acute and emergency","Child health","General practice and primary healthcare","Mental health","Obstetrics and gynaecology","Perioperative medicine and anaesthesia"],"yield":"low"},{"name":"Surgical site infection","tags":["Clinical imaging","Infection","Perioperative medicine and anaesthesia","Sexual health"],"yield":"high"},{"name":"Syphilis","tags":["General practice and primary healthcare","Infection","Obstetrics and gynaecology"],"yield":"low"},{"name":"Systemic lupus erythematosus","tags":["Musculoskeletal","Neurosciences"],"yield":"medium"},{"name":"Tension headache","tags":["Child health","General practice and primary healthcare","Mental health"],"yield":"medium"},{"name":"Termination of pregnancy","tags":["Obstetrics and gynaecology"],"yield":"low"},{"name":"Testicular cancer","tags":["Cancer","Renal and urology","Surgery"],"yield":"low"},{"name":"Testicular torsion","tags":["Acute and emergency","Child health","Surgery"],"yield":"low"},{"name":"Thyroid eye disease","tags":["Endocrine and metabolic","Ophthalmology"],"yield":"high"},{"name":"Thyroid nodules","tags":["Endocrine and metabolic"],"yield":"high"},{"name":"Thyrotoxicosis","tags":["Child health","Endocrine and metabolic","Infection"],"yield":"high"},{"name":"Tonsillitis","tags":["Child health","Ear, nose and throat","General practice and primary healthcare"],"yield":"low"},{"name":"Toxic shock syndrome","tags":["Acute and emergency","Child health","Infection"],"yield":"low"},{"name":"Transfusion reactions","tags":["Acute and emergency","Clinical haematology"],"yield":"high"},{"name":"Transient ischaemic attacks","tags":["Cardiovascular","Neurosciences"],"yield":"high"},{"name":"Trichomonas vaginalis","tags":["General practice and primary healthcare","Infection","Obstetrics and gynaecology"],"yield":"low"},{"name":"Trigeminal neuralgia","tags":["General practice and primary healthcare","Neurosciences"],"yield":"high"},{"name":"Tuberculosis","tags":["Child health","Infection","Respiratory"],"yield":"high"},{"name":"Unstable angina","tags":["Acute and emergency"],"yield":"high"},{"name":"Upper limb fractures","tags":["Clinical imaging","Musculoskeletal"],"yield":"low"},{"name":"Upper limb soft tissue injury","tags":["Clinical imaging","General practice and primary healthcare","Musculoskeletal"],"yield":"low"},{"name":"Upper respiratory tract infection","tags":["Child health","Infection","Respiratory"],"yield":"high"},{"name":"Urinary incontinence","tags":["General practice and primary healthcare","Medicine of older adult","Obstetrics and gynaecology","Renal and urology"],"yield":"medium"},{"name":"Urinary tract calculi","tags":["Renal and urology","Obstetrics and gynaecology"],"yield":"medium"},{"name":"Urinary tract infection","tags":["Child health","General practice and primary healthcare","Infection","Renal and urology"],"yield":"medium"},{"name":"Urticaria","tags":["Child health","Dermatology","General practice and primary healthcare"],"yield":"medium"},{"name":"Uveitis","tags":["Ophthalmology"],"yield":"low"},{"name":"Varicella zoster","tags":["General practice and primary healthcare","Infection","Obstetrics and gynaecology"],"yield":"low"},{"name":"Varicose veins","tags":["General practice and primary healthcare","Surgery"],"yield":"high"},{"name":"Vasa praevia","tags":["Obstetrics and gynaecology"],"yield":"low"},{"name":"Vasovagal syncope","tags":["Cardiovascular","General practice and primary healthcare"],"yield":"high"},{"name":"Venous ulcers","tags":["Cardiovascular","General practice and primary healthcare"],"yield":"high"},{"name":"Viral exanthema","tags":["Child health","General practice and primary healthcare","Infection"],"yield":"low"},{"name":"Viral gastroenteritis","tags":["Child health","General practice and primary healthcare","Infection"],"yield":"high"},{"name":"Viral hepatitides","tags":["Infection"],"yield":"high"},{"name":"Visual field defects","tags":["Child health","Ophthalmology","Endocrine and metabolic"],"yield":"medium"},{"name":"Vitamin B12 and/or folate deficiency","tags":["Gastrointestinal including liver"],"yield":"high"},{"name":"Volvulus","tags":["Child health","Clinical imaging","Surgery"],"yield":"high"},{"name":"VTE in pregnancy and puerperium","tags":["Obstetrics and gynaecology"],"yield":"low"},{"name":"Wernicke's encephalopathy","tags":["Mental health","Neurosciences"],"yield":"high"},{"name":"Whooping cough","tags":["General practice and primary healthcare","Infection"],"yield":"medium"}]};
+
+    // State
+    let currentTab = 'conditions';
+    let selectedTags = new Set();
+    let activeYields = new Set(['high', 'medium', 'low']);
+    let searchQuery = '';
+    let sortMode = 'name-asc';
+
+    // All unique tags (union)
+    const ALL_TAGS = (() => {
+      const s = new Set();
+      DATA.presentations.forEach(i => i.tags.forEach(t => s.add(t)));
+      DATA.conditions.forEach(i => i.tags.forEach(t => s.add(t)));
+      return Array.from(s).sort((a, b) => a.localeCompare(b));
+    })();
+
+    // DOM refs
+    const resultsEl = document.getElementById('results');
+    const statsEl = document.getElementById('stats');
+    const tagListEl = document.getElementById('tagList');
+    const searchEl = document.getElementById('search');
+    const sortEl = document.getElementById('sort');
+
+    // Render tag chips
+    function renderTagChips() {
+      tagListEl.innerHTML = ALL_TAGS.map(tag => {
+        const selected = selectedTags.has(tag) ? 'selected' : '';
+        return `<button class="tag-chip ${selected}" data-tag="${escapeAttr(tag)}">${escapeHtml(tag)}</button>`;
+      }).join('');
+    }
+
+    // Filter + sort logic
+    function getFiltered() {
+      let items = DATA[currentTab].slice();
+
+      // Search
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        items = items.filter(i => i.name.toLowerCase().includes(q));
+      }
+
+      // Yield
+      items = items.filter(i => activeYields.has(i.yield));
+
+      // Tags (AND logic: item must have ALL selected tags)
+      if (selectedTags.size > 0) {
+        items = items.filter(i => {
+          const set = new Set(i.tags);
+          for (const t of selectedTags) if (!set.has(t)) return false;
+          return true;
+        });
+      }
+
+      // Sort
+      const yieldOrder = { high: 0, medium: 1, low: 2 };
+      items.sort((a, b) => {
+        switch (sortMode) {
+          case 'name-asc': return a.name.localeCompare(b.name);
+          case 'name-desc': return b.name.localeCompare(a.name);
+          case 'yield-high': return yieldOrder[a.yield] - yieldOrder[b.yield] || a.name.localeCompare(b.name);
+          case 'yield-low': return yieldOrder[b.yield] - yieldOrder[a.yield] || a.name.localeCompare(b.name);
+          case 'tags-desc': return b.tags.length - a.tags.length || a.name.localeCompare(b.name);
+          default: return 0;
+        }
+      });
+
+      return items;
+    }
+
+    function render() {
+      const items = getFiltered();
+      const total = DATA[currentTab].length;
+
+      statsEl.innerHTML = `
+        <span>Showing <strong>${items.length}</strong> of <strong>${total}</strong> ${currentTab}</span>
+        ${selectedTags.size ? `<span>· ${selectedTags.size} tag filter${selectedTags.size > 1 ? 's' : ''} active</span>` : ''}
+        ${searchQuery ? `<span>· search: “${escapeHtml(searchQuery)}”</span>` : ''}
+      `;
+
+      if (items.length === 0) {
+        resultsEl.innerHTML = `
+          <div class="empty">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+            <p>No matches. Try clearing filters or changing the search.</p>
+          </div>`;
+        return;
+      }
+
+      resultsEl.innerHTML = items.map(item => `
+        <article class="card">
+          <div class="card-header">
+            <h2 class="card-title">${escapeHtml(item.name)}</h2>
+            <span class="yield-badge ${item.yield}">${item.yield}</span>
+          </div>
+          <div class="card-tags">
+            ${item.tags.map(t => `<span class="card-tag">${escapeHtml(t)}</span>`).join('')}
+          </div>
+        </article>
+      `).join('');
+    }
+
+    // Helpers
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+    function escapeAttr(str) {
+      return escapeHtml(str).replace(/'/g, '&#39;');
+    }
+
+    // Event listeners
+    document.querySelectorAll('.tab').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentTab = btn.dataset.tab;
+        render();
+      });
+    });
+
+    searchEl.addEventListener('input', e => {
+      searchQuery = e.target.value.trim();
+      render();
+    });
+
+    sortEl.addEventListener('change', e => {
+      sortMode = e.target.value;
+      render();
+    });
+
+    document.getElementById('yieldFilters').addEventListener('click', e => {
+      const btn = e.target.closest('.yield-btn');
+      if (!btn) return;
+      const y = btn.dataset.yield;
+      if (activeYields.has(y)) {
+        if (activeYields.size > 1) {
+          activeYields.delete(y);
+          btn.classList.remove('active');
+        }
+      } else {
+        activeYields.add(y);
+        btn.classList.add('active');
+      }
+      render();
+    });
+
+    tagListEl.addEventListener('click', e => {
+      const chip = e.target.closest('.tag-chip');
+      if (!chip) return;
+      const tag = chip.dataset.tag;
+      if (selectedTags.has(tag)) {
+        selectedTags.delete(tag);
+        chip.classList.remove('selected');
+      } else {
+        selectedTags.add(tag);
+        chip.classList.add('selected');
+      }
+      render();
+    });
+
+    document.getElementById('clearTags').addEventListener('click', () => {
+      selectedTags.clear();
+      renderTagChips();
+      render();
+    });
+
+    // Init
+    renderTagChips();
+    render();
+  </script>
+</body>
+</html>
